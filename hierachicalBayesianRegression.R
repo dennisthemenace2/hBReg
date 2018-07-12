@@ -62,7 +62,6 @@ hreg <- setRefClass("hreg",
                         lastbound = -Inf
                         
                         for(i in 1:1000){
-                          lastDelta = unlist(.self$beta)
                           sse = 0
                           deltadiv = 0
                           sumVarBi = 0
