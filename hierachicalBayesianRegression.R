@@ -2,7 +2,7 @@
 ## using Variational Approximation
 
 hreg <- setRefClass("hreg",
-                    fields = list( beta='list', delta = 'matrix',sigma='numeric',si='numeric', a0 = 'numeric',b0='numeric' ,W='matrix',c0 = 'numeric',d0='numeric',e0 = 'numeric',f0='numeric',mse='numeric',iterations='numeric',lowerbound ='numeric' ),
+                    fields = list( beta='list', delta = 'matrix',sigma='numeric',si='numeric', a0 = 'numeric',b0='numeric' ,W='matrix',c0 = 'numeric',d0='numeric',e0 = 'numeric',f0='numeric',mse='numeric',iterations='numeric',lowerbound ='numeric',bounds='numeric' ),
                     methods = list(
                       
                       # X Values
@@ -37,7 +37,7 @@ hreg <- setRefClass("hreg",
                         xylist = list()
                           
                          .self$si = .self$c0 /.self$d0 
-                        
+                              
                         for(c in 1:C){ ##create each client matrix
                           .self$beta[[c]]= as.matrix(.self$delta) ## plus intercept 
                                                     
@@ -60,11 +60,12 @@ hreg <- setRefClass("hreg",
                      
                         ##compute variational bound   
                         lastbound = -Inf
-                        
+                        .self$bounds= c(lastbound)    
                         for(i in 1:1000){
                           sse = 0
                           deltadiv = 0
                           sumVarBi = 0
+                          sumVar = 0
                           ##
                           sumlogdetbi = 0
                           ##
@@ -81,7 +82,8 @@ hreg <- setRefClass("hreg",
                             sse = sse + sum((xc %*% .self$beta[[c]] - yc)^2)
                             deltadiv = deltadiv + sum((.self$beta[[c]] - .self$delta)^2)
                           
-                            sumVarBi = sumVarBi + diag(Icov %*%xx)     
+                            sumVarBi = sumVarBi + diag(Icov %*%xx)
+                            sumVar = sumVar +sum(diag(Icov))
                             ##
                             sumlogdetbi = sumlogdetbi +log(det(Icov))
                             ##
@@ -99,7 +101,7 @@ hreg <- setRefClass("hreg",
                         
                          .self$delta = DIcov %*% (mmu)
                         
-                          dn = (.self$d0 + 0.5 * (deltadiv+ sum(diag(DIcov)) +  sum(sumVarBi) ) )
+                          dn = (.self$d0 + 0.5 * (deltadiv+ sum(diag(DIcov)) +  sumVar ) )
                       
                          .self$si = as.numeric(cn/dn )
                    
@@ -117,7 +119,7 @@ hreg <- setRefClass("hreg",
                          lpw =sum( (.self$e0-1)*( digamma(en) - log(fn) ) - .self$e0*(diag(.self$W) ) )
                          lpY= (N/2)*( digamma(an) - log(bn) )- (.self$sigma/2)*(sse + sum(sumVarBi)  )
                          plDelta = sum( (p/2)*(digamma(en) - log(fn))-sum( (diag(.self$W)/2)*( .self$delta^2 +  diag(DIcov)) ) )
-                         plbeta = (C/2)*(digamma(cn) - log(dn)) - (.self$si/2)*(deltadiv+ sum(diag(DIcov)) +  sum(sumVarBi) )
+                         plbeta = (C/2)*(digamma(cn) - log(dn)) - (.self$si/2)*(deltadiv+ sum(diag(DIcov)) +  sum(sumVar) )
                          #----
                          esigma = an -log(bn)+lgamma(an)+(1-an)*digamma(an)
                          esi = cn -log(dn)+lgamma(cn)+(1-cn)*digamma(cn)
@@ -128,6 +130,7 @@ hreg <- setRefClass("hreg",
                        
                          bound = lpsigma+lpsi+lpw+lpY+plDelta+plbeta -esigma - esi - eW -eDelta - ebeta
                        
+                         .self$bounds= c(.self$bounds,bound)
                          if(lastbound > bound){
                            print('warning: lower bound should increase') 
                          }
