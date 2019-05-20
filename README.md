@@ -11,5 +11,9 @@ How to Predict Mood? Delving into Features of Smartphone-Based Data
 Presented: Conference: 22nd Americas Conference on Information Systems, August 2016
 
 
+Hierarchical Beta Regression
+
 I added the Beta Regression counter part. Its in experimental state tough.
+
+
 
