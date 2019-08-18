@@ -1,8 +1,8 @@
 ## Hierarchical Beta Regression
 
 
-## Variational implementation of the a Hierarchical Beta Regression model.
-# It utilizes Laplace approximation to fit the non-conjuagte Beta distribution.
+## Variational implementation of a Hierarchical Beta Regression model.
+# It utilizes Laplace approximation to fit the non-conjugate Beta distribution.
 
 hBetareg <- setRefClass("hBetareg",
                     fields = list(Dcov= 'matrix', cov='list',beta='list', delta = 'matrix',sigma='numeric',si='numeric', a0 = 'numeric',b0='numeric' ,W='matrix',c0 = 'numeric',d0='numeric',e0 = 'numeric',f0='numeric',mse='numeric',iterations='numeric',lowerbound ='numeric',bounds='numeric',an='numeric',bn='numeric' ),

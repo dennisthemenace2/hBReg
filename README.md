@@ -18,7 +18,7 @@ Presented: Conference: 22nd Americas Conference on Information Systems, August 2
 
 Hierarchical Beta Regression
 
-I added the Beta Regression counter part. Its in experimental state tough.
-
+I added the Beta Regression counter part.
+It utilizes Laplace approximation for the non-conjugate Beta distribution.
 
 
