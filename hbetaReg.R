@@ -193,7 +193,7 @@ hBetareg <- setRefClass("hBetareg",
                             X = xc
                             Y = yc
                             betaoptimres = optim(beta, fnbeta,method = "BFGS",gr=fngrbeta,
-                                                 lower = -Inf, upper = Inf,
+                                                 #lower = -Inf, upper = Inf,
                                                  control = list(fnscale = -1), hessian = T)  
                             
                           #  betaoptimres$par
@@ -202,8 +202,8 @@ hBetareg <- setRefClass("hBetareg",
                             ##check gradient.
                             
                             beta= betaoptimres$par
-                            Icov = solve(-fngr2beta(betaoptimres$par))# 
-                          #  Icov = solve(-betaoptimres$hessian) 
+                          #  Icov = solve(-fngr2beta(betaoptimres$par))# 
+                            Icov = solve(-betaoptimres$hessian) 
                             ##optimize phi
                             
                             .self$cov[[c]] = Icov
@@ -247,8 +247,8 @@ hBetareg <- setRefClass("hBetareg",
                           .self$si = as.numeric(cn/dn )
                           
                           
-                          phioptimres = optim(.self$sigma, fnphi,method = "BFGS",gr = fnphigr,
-                                              #                         lower = 0, upper = Inf,
+                          phioptimres = optim(.self$sigma, fnphi,method = "L-BFGS-B",gr = fnphigr,
+                                              lower = 0, upper = Inf,
                                               control = list(fnscale = -1), hessian = T)  
                           #beta_var = -(betaoptimres$hessian)
                           
