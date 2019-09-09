@@ -22,3 +22,8 @@ I added the Beta Regression counter part.
 It utilizes Laplace approximation for the non-conjugate Beta distribution.
 
 
+Decay Regression 
+
+I added a model with decaying weights.
+y= x* beta1*exp(-lambda*(0:M-1)) +beta0
+
