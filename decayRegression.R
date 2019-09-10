@@ -210,6 +210,11 @@ sum((pred-y)^2)
 
 ######mcmcm
 
+
+printf <- function(...){
+  invisible(print(sprintf(...)))
+}
+
 library("mvtnorm")
 
 ##Gibbs sampler
@@ -219,6 +224,7 @@ sampleGibbs = function(x,y,iterations = 1000 ){
   M = ncol(x)
   
   a0 = 0.001
+  b0 = 0.001
   an = a0 + 0.5*N
 
   e0 = 0.001
