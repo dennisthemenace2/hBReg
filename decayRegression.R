@@ -66,7 +66,7 @@ bfreg <- setRefClass("bfreg",
                       beta0 = model$coefficients[1]
                       lambda =exp( abs(model$coefficients[3]) )
                     }else{
-                      lambda =runif(1,1,100)
+                      lambda =rgamma(1,1,1)
                       betas = rnorm(1) 
                       beta0 = rnorm(1)
                     }
