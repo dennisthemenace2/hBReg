@@ -13,7 +13,7 @@
 #y = x * beta1*exp(-lambda *t) + beta0
 
 #Lets write down the joint probability 
-#p(y,x,beta, lambda, s, sigma) = p(y|x*b*exp(-lambda*t), sigma )
+#p(y,x,beta, lambda, s, sigma) = p(y|x*beta*exp(-lambda*t), sigma )
 #                                p(beta|0,s) p(lambda|e0,f0) p(sigma|a0,b0) p(s|c0,c0)   
 #
 #Distributions used
@@ -94,7 +94,7 @@ bfreg <- setRefClass("bfreg",
                     fnlambda = function(lambda){
                       w = matrix( betas* exp(- lambda * 0:(M-1) ),ncol=1)
                       err = sum( ( (x%*%w +beta0) -y)^2)
-                      res = -(sigma/2)*err  + (e0 -1)*log(lambda) + f0 *lambda
+                      res = -(sigma/2)*err  + (e0 -1)*log(lambda) - f0 *lambda
                       res
                     }
                     ###gradient function
@@ -106,7 +106,7 @@ bfreg <- setRefClass("bfreg",
                       for(i in 1:N){
                         res = res + sum( err[i] *((x[i,]%*%(w*k ) )) )
                       }
-                      res = sigma*res  + (e0 -1)/lambda + f0 
+                      res = sigma*res  + (e0 -1)/lambda - f0 
                       res
                     }
                     
@@ -240,7 +240,7 @@ sampleGibbs = function(x,y,iterations = 1000 ){
   fnlambda = function(lambda){
     dx = matrix( w[1]* exp(- lambda * 0:(M-1) ),ncol=1)
     err = sum( ( (x%*%dx +w[2]) -y)^2)
-    res = -(sigma/2)*err  + (e0 -1)*log(lambda) + f0 *lambda
+    res = -(sigma/2)*err  + (e0 -1)*log(lambda) - f0 *lambda
     res
   }
 
