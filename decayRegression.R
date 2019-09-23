@@ -311,3 +311,53 @@ plot(samples[,'beta0'])
 colMeans(samples)
 
 printf("%f %f %f %f %f",reg$beta1,reg$beta0,reg$lambda,reg$s,reg$sigma)
+
+
+###jags model
+library(mcmcplots)
+library(runjags)
+library(rjags)
+
+
+reg_jags<- function(x,y){
+  modelstring = "
+  model{
+  for( j in 1:N ){
+    for(k in 1:10){
+      seq[j,k] = exp( -lambda * weights[k] )
+    }
+    mu[j] =  x[j, ] %*% ( beta1 * seq[j,] )  
+    y[j] ~ dnorm( mu[j] +beta0 , sigma) 
+  }
+  
+
+  lambda~dgamma(0.001,0.001)
+  sigma~dgamma(0.001,0.001)
+  beta0 ~ dnorm(0,s)
+  beta1 ~ dnorm(0,s)
+  s~dgamma(0.001,0.001)
+  }"
+  writeLines(modelstring,con="decreg.txt")
+ 
+ set.seed(123)
+  
+  p = ncol(X) ## 
+  
+  jags_data <- list(y = as.numeric(y),
+                    x = x,
+                    N=nrow(x),weights = seq(0,ncol(x)-1)
+                    )
+  params <- c("beta1",'sigma','s','lambda','beta0')                   
+  adapt <- 5000
+  burn <- 5000
+  iterations <- 10000
+  inits <- list( )
+  
+  sample <- run.jags(model="decreg.txt", thin =4, monitor=params, data=jags_data, n.chains=1, inits=inits, adapt=adapt, burnin=burn, sample=iterations, summarise=T, method="parallel") 
+  
+  sample
+}
+
+
+sample = reg_jags(x,y)
+sample$summaries
