@@ -61,10 +61,23 @@ bfreg <- setRefClass("bfreg",
                     
                     ##need some inital guess
                     if(initialGuess == T){
-                      model = lm('y~.',as.data.frame(cbind(x,y)))
-                      betas = model$coefficients[2]
-                      beta0 = model$coefficients[1]
-                      lambda =exp( abs(model$coefficients[3]) )
+                      mod = NULL
+                      fn = function(params){
+                        k  = c( exp(- params[1] * 0:(M-1) ) )
+                        
+                        xnew  = x%*%k 
+                        data = cbind(xnew,y)
+                        data = as.data.frame(data)
+                        names(data) = c('X1','Y')
+                        mod <<- lm('Y~.',data)
+                        sum(mod$residuals^2)
+                      }
+                      ret = optim(par = c(1), fn= fn,method = "Brent",
+                                             lower = 10e-10, upper = 100,
+                                             control = list(fnscale = 1))  
+                      lambda = ret$par
+                      betas = mod$coefficients[2]
+                      beta0 = mod$coefficients[1]
                     }else{
                       lambda =rgamma(1,1,1)
                       betas = rnorm(1) 
