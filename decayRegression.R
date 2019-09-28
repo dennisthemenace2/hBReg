@@ -1,4 +1,3 @@
-
 ### decay regression
 
 
@@ -44,9 +43,33 @@ x<- matrix(X[,1:(ncol(X)-1) ],ncol = n_time)
 colnames(x)= paste('x_',1:n_time,sep = '')
 
 
+printf <- function(...){
+  invisible(print(sprintf(...)))
+}
 
 ### note that the feature contribution is decreasing from left to right, that is important.
 # if your data is arranged the other way around take care of this, or edit this code
+
+###used for unitial guess
+estiamteMaximumLikelihood = function(x,y){
+  M = ncol(x)
+  
+  mod = NULL
+  fn = function(params){
+    k  = c( exp(- params[1] * 0:(M-1) ) )
+    
+    xnew  = x%*%k 
+    data = cbind(xnew,y)
+    data = as.data.frame(data)
+    names(data) = c('X1','Y')
+    mod <<- lm('Y~.',data)
+    sum(mod$residuals^2)
+  }
+  ret = optim(par = c(1), fn= fn,method = "Brent",
+              lower = 10e-10, upper = 100,
+              control = list(fnscale = 1))  
+  list('beta0'= mod$coefficients[1],'beta1'=mod$coefficients[2],'lambda'= ret$par)
+}
 
 
 ###Variational approximation
@@ -61,23 +84,11 @@ bfreg <- setRefClass("bfreg",
                     
                     ##need some inital guess
                     if(initialGuess == T){
-                      mod = NULL
-                      fn = function(params){
-                        k  = c( exp(- params[1] * 0:(M-1) ) )
-                        
-                        xnew  = x%*%k 
-                        data = cbind(xnew,y)
-                        data = as.data.frame(data)
-                        names(data) = c('X1','Y')
-                        mod <<- lm('Y~.',data)
-                        sum(mod$residuals^2)
-                      }
-                      ret = optim(par = c(1), fn= fn,method = "Brent",
-                                             lower = 10e-10, upper = 100,
-                                             control = list(fnscale = 1))  
-                      lambda = ret$par
-                      betas = mod$coefficients[2]
-                      beta0 = mod$coefficients[1]
+                      ret = estiamteMaximumLikelihood(x,y)
+                      
+                      lambda = ret$lambda
+                      betas = ret$beta1
+                      beta0 = ret$beta0
                     }else{
                       lambda =rgamma(1,1,1)
                       betas = rnorm(1) 
@@ -107,7 +118,7 @@ bfreg <- setRefClass("bfreg",
                     fnlambda = function(lambda){
                       w = matrix( betas* exp(- lambda * 0:(M-1) ),ncol=1)
                       err = sum( ( (x%*%w +beta0) -y)^2)
-                      res = -(sigma/2)*err  + (e0 -1)*log(lambda) - f0 *lambda
+                      res = -((sigma) /2)*err  + (e0 -1)*log(lambda) - f0 *lambda
                       res
                     }
                     ###gradient function
@@ -119,7 +130,7 @@ bfreg <- setRefClass("bfreg",
                       for(i in 1:N){
                         res = res + sum( err[i] *((x[i,]%*%(w*k ) )) )
                       }
-                      res = sigma*res  + (e0 -1)/lambda - f0 
+                      res = (sigma) *res  + (e0 -1)/lambda - f0 
                       res
                     }
                     
@@ -154,11 +165,11 @@ bfreg <- setRefClass("bfreg",
                         en = as.numeric( (lambdaoptimres$par)^2/ lambda_var )
                         fn = as.numeric( lambdaoptimres$par/ lambda_var     )   
                     
-                        
-                        bn = b0 + 0.5*sum( err + 
-                                            sum( diag( Icov %*%xkxk)  )   + 
-                                            sum( as.numeric(lambda_var)*diag(xkxk) )
-                                           )  
+
+                        bn = b0 + 0.5*sum( err  
+                                           + sum( diag( Icov %*%xkxk)  )
+                                           + sum( diag(xkxk) * as.numeric(lambda_var) )
+                                          )  
                         sigma = an/bn
                         
                         ##update s
@@ -214,24 +225,19 @@ bfreg <- setRefClass("bfreg",
 
 reg = bfreg()
 
-reg$train(x,y,initialGuess=F,epsilon = 10e-5,maxiterations = 100)
+reg$train(x,y,initialGuess=T,epsilon = 10e-5,maxiterations = 200)
 plot(reg$bounds)
 
-pred = reg$predict(x,y)
-sum((pred-y)^2)
+#pred = reg$predict(x,y)
+#sum((pred-y)^2)
 
 
 ######mcmcm
 
-
-printf <- function(...){
-  invisible(print(sprintf(...)))
-}
-
 library("mvtnorm")
 
 ##Gibbs sampler
-sampleGibbs = function(x,y,iterations = 1000 ){
+sampleGibbs = function(x,y,iterations = 1000,initialGuess = F ){
   
   N = nrow(x)
   M = ncol(x)
@@ -245,15 +251,21 @@ sampleGibbs = function(x,y,iterations = 1000 ){
   en = e0 + 0.5*2
   
   ##set up 
-  lambda = rgamma(1,1,1)
+  if(initialGuess == T){
+    ret = estiamteMaximumLikelihood(x,y)
+    lambda = ret$lambda
+    w = matrix(c(ret$beta1,ret$beta0),ncol=2 )
+  }else{
+    lambda =rgamma(1,1,1)
+    w = rmvnorm(1,rep(1,2),diag(2))
+  }
   sn = rgamma(1,1,1)
   sigma =  rgamma(1,1,1)
-  w = rmvnorm(1,rep(1,2),diag(2))
   
   fnlambda = function(lambda){
     dx = matrix( w[1]* exp(- lambda * 0:(M-1) ),ncol=1)
     err = sum( ( (x%*%dx +w[2]) -y)^2)
-    res = -(sigma/2)*err  + (e0 -1)*log(lambda) - f0 *lambda
+    res =  -((sigma) /2)*err  + (e0 -1)*log(lambda) - f0 *lambda
     res
   }
 
@@ -281,7 +293,7 @@ sampleGibbs = function(x,y,iterations = 1000 ){
   
   keep = matrix(,ncol=5,nrow=iterations)
   for(i in 1:iterations){
-    if(i%%100==0){
+    if(i%%500==0){
       printf("%d / %d",i,iterations)
     }
     
@@ -315,8 +327,8 @@ sampleGibbs = function(x,y,iterations = 1000 ){
   
 }
 
-samples = sampleGibbs(x,y,12000)
-samples = samples[2000:12000,]
+samples = sampleGibbs(x,y,13000,initialGuess = T)
+samples = samples[3000:13000,]
 
 plot(samples[,'beta1'])
 plot(samples[,'beta0'])
@@ -324,15 +336,18 @@ plot(samples[,'beta0'])
 colMeans(samples)
 
 printf("%f %f %f %f %f",reg$beta1,reg$beta0,reg$lambda,reg$s,reg$sigma)
+####
 
 
-###jags model
+#### implementation in Jags
+
+
 library(mcmcplots)
 library(runjags)
 library(rjags)
 
 
-reg_jags<- function(x,y){
+reg_jags= function(x,y,initialGuess=F,iterations=10000,burn=5000,adapt=5000,thin=4){
   modelstring = "
   model{
   for( j in 1:N ){
@@ -351,26 +366,32 @@ reg_jags<- function(x,y){
   s~dgamma(0.001,0.001)
   }"
   writeLines(modelstring,con="decreg.txt")
- 
- set.seed(123)
+  ########
+  set.seed(123)
   
   p = ncol(X) ## 
+  # testX = matrix(c(1,1),nrow=1 );
   
   jags_data <- list(y = as.numeric(y),
                     x = x,
                     N=nrow(x),weights = seq(0,ncol(x)-1)
                     )
   params <- c("beta1",'sigma','s','lambda','beta0')                   
-  adapt <- 5000
-  burn <- 5000
-  iterations <- 10000
-  inits <- list( )
+#  adapt <- 5000
+ # burn <- 5000
+  #iterations <- 10000
+  if(initialGuess==T){
+    ret = estiamteMaximumLikelihood(x,y)
+    inits <- list('beta1'= ret$beta1,'beta0'= ret$beta0, 'lambda' = ret$lambda )
+  }else{
+    inits <- list( )
+  }
   
-  sample <- run.jags(model="decreg.txt", thin =4, monitor=params, data=jags_data, n.chains=1, inits=inits, adapt=adapt, burnin=burn, sample=iterations, summarise=T, method="parallel") 
+  sample <- run.jags(model="decreg.txt", thin =thin, monitor=params, data=jags_data, n.chains=1, inits=inits, adapt=adapt, burnin=burn, sample=iterations, summarise=T, method="parallel") 
   
   sample
 }
 
 
-sample = reg_jags(x,y)
-sample$summaries
+sample = reg_jags(x,y,initialGuess = T)
+sample$summaries-
